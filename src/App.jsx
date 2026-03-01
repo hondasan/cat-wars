@@ -712,119 +712,149 @@ export default function NyanDefenseApp() {
   const moneyPercent = Math.min(100, (gameState.money / gameState.maxMoney) * 100);
 
   return (
-    <div className="flex flex-col items-center w-full bg-gray-900 min-h-screen font-sans select-none relative overflow-hidden">
-      {gameState.bossSpawned && <div className="absolute inset-0 border-[16px] border-red-600 pointer-events-none z-50 opacity-50 animate-pulse"></div>}
+    <div className="flex flex-col w-full bg-gray-900 h-[100dvh] font-sans select-none relative overflow-hidden">
+      {gameState.bossSpawned && <div className="absolute inset-0 border-[12px] md:border-[16px] border-red-600 pointer-events-none z-50 opacity-50 animate-pulse rounded-sm"></div>}
 
-      {/* ヘッダー UI */}
-      <div className="w-full max-w-5xl bg-white border-b-8 border-black text-black p-2 md:p-3 flex justify-between items-end z-10 shadow-lg">
-        <div className="flex flex-col w-5/12">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-lg md:text-xl font-black text-orange-500 flex items-center gap-1">
-              <Coins size={20} strokeWidth={3} /> {gameState.money} <span className="text-gray-500 text-[10px] md:text-xs">/ {gameState.maxMoney}</span>
+      {/* ===== ヘッダー ===== */}
+      <div className="w-full bg-gradient-to-b from-gray-800 to-gray-900 text-white px-2 md:px-4 pt-1 pb-1.5 md:pt-2 md:pb-2 z-20 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b-4 border-yellow-500 shrink-0">
+
+        {/* 上段: ステージ名 & 倍速コントロール & XP */}
+        <div className="flex items-center justify-between mb-1 md:mb-1.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] md:text-sm font-black bg-gradient-to-r from-yellow-500 to-orange-500 text-black px-2 md:px-3 py-0.5 rounded-full border-2 border-black shadow-[2px_2px_0_rgba(0,0,0,0.5)] whitespace-nowrap truncate">
+              {gameState.stageName}
             </span>
-            <span className="text-[10px] md:text-xs font-black bg-yellow-400 px-2 py-0.5 rounded-full border-2 border-black shadow-[2px_2px_0_rgba(0,0,0,1)]">
-              財布 Lv.{gameState.walletLevel}
+            <span className="text-yellow-400 text-xs md:text-base font-black flex items-center gap-1 whitespace-nowrap">
+              <Sword size={12} strokeWidth={3} className="shrink-0" /> {gameState.sessionXp.toLocaleString()} <span className="text-gray-500 text-[8px] md:text-[10px]">XP</span>
             </span>
           </div>
-          <div className="w-full bg-gray-200 h-3 md:h-4 rounded-full border-2 border-black overflow-hidden relative">
-            <div className="h-full bg-yellow-400 transition-all duration-100" style={{ width: `${moneyPercent}%` }}></div>
-            <div className="absolute inset-0 flex justify-between px-1/4 opacity-30 pointer-events-none"><div className="w-px h-full bg-black"></div><div className="w-px h-full bg-black"></div><div className="w-px h-full bg-black"></div></div>
-          </div>
-        </div>
 
-        <div className="flex flex-col items-center w-3/12 -translate-y-2">
-          <span className="text-black font-black text-[10px] md:text-sm tracking-widest bg-white px-3 py-1 rounded-full border-4 border-black shadow-[2px_2px_0_rgba(0,0,0,1)] -mt-6 z-20 absolute top-2 whitespace-nowrap">{gameState.stageName}</span>
-          <span className="text-blue-600 text-sm md:text-lg font-black flex items-center gap-1 mt-4"><Sword size={14} strokeWidth={3} /> {gameState.sessionXp.toLocaleString()}</span>
-          {/* 倍速 & 一時停止 */}
-          <div className="flex items-center gap-1 mt-1">
+          <div className="flex items-center gap-1 md:gap-1.5 shrink-0">
             <button
               onClick={() => { if (engineRef.current) engineRef.current.togglePause(); }}
-              className={`w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-lg border-2 border-black transition-all
-                ${gameState.isPaused ? 'bg-yellow-400 shadow-[0_2px_0_rgba(0,0,0,1)]' : 'bg-white shadow-[0_2px_0_rgba(0,0,0,1)] hover:bg-gray-100'}
+              className={`w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-lg border-2 transition-all
+                ${gameState.isPaused
+                  ? 'bg-yellow-400 border-yellow-600 shadow-[0_2px_0_rgba(0,0,0,0.5)]'
+                  : 'bg-gray-700 border-gray-500 shadow-[0_2px_0_rgba(0,0,0,0.5)] hover:bg-gray-600'}
                 active:translate-y-0.5 active:shadow-none`}
             >
-              {gameState.isPaused ? <Play size={14} strokeWidth={3} fill="black" /> : <Pause size={14} strokeWidth={3} />}
+              {gameState.isPaused ? <Play size={16} strokeWidth={3} fill="black" className="text-black" /> : <Pause size={16} strokeWidth={3} className="text-white" />}
             </button>
             {[1, 2, 3, 5].map(s => (
               <button
                 key={s}
                 onClick={() => { if (engineRef.current) engineRef.current.setSpeed(s); }}
-                className={`h-7 md:h-8 px-1.5 md:px-2 flex items-center justify-center rounded-lg border-2 border-black text-[9px] md:text-[10px] font-black transition-all
-                  ${gameState.gameSpeed === s ? 'bg-orange-400 text-white shadow-[0_2px_0_rgba(0,0,0,1)]' : 'bg-white shadow-[0_2px_0_rgba(0,0,0,1)] hover:bg-gray-100'}
+                className={`w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-lg border-2 text-[10px] md:text-xs font-black transition-all
+                  ${gameState.gameSpeed === s
+                    ? 'bg-orange-500 border-orange-700 text-white shadow-[0_2px_0_rgba(0,0,0,0.5)]'
+                    : 'bg-gray-700 border-gray-500 text-gray-300 shadow-[0_2px_0_rgba(0,0,0,0.5)] hover:bg-gray-600'}
                   active:translate-y-0.5 active:shadow-none`}
               >
-                {s === 1 ? '1x' : `${s}x`}
+                {s}x
               </button>
             ))}
           </div>
         </div>
 
-        <div className="w-4/12 flex flex-col items-end">
-          <div className="flex justify-between items-center mb-1 w-full">
-            <span className="text-[10px] md:text-xs text-blue-600 font-black flex items-center gap-1"><Zap size={14} strokeWidth={3} /> にゃんこ砲</span>
-            <span className="text-[9px] md:text-xs text-red-500 font-black">{gameState.canFireCannon ? '発射可能！' : `${Math.floor(gameState.cannonPercent)}%`}</span>
+        {/* 下段: お金 + 敵城HP + にゃんこ砲 */}
+        <div className="flex items-center gap-2 md:gap-3">
+          {/* お金 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-sm md:text-lg font-black text-yellow-400 flex items-center gap-1 truncate">
+                <Coins size={14} strokeWidth={3} className="shrink-0" /> {gameState.money}
+                <span className="text-gray-500 text-[8px] md:text-[10px]">/{gameState.maxMoney}</span>
+              </span>
+              <span className="text-[8px] md:text-[10px] font-black bg-yellow-500 text-black px-1.5 py-0.5 rounded-full border border-yellow-700 whitespace-nowrap">
+                Lv.{gameState.walletLevel}
+              </span>
+            </div>
+            <div className="w-full bg-gray-700 h-2.5 md:h-3 rounded-full border border-gray-600 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-yellow-400 to-yellow-300 transition-all duration-100 rounded-full" style={{ width: `${moneyPercent}%` }}></div>
+            </div>
           </div>
-          <div className="w-full bg-gray-200 h-3 md:h-4 rounded-full border-2 border-black overflow-hidden">
-            <div className={`h-full transition-all duration-100 ${gameState.canFireCannon ? 'bg-blue-400 animate-pulse' : 'bg-blue-600'}`} style={{ width: `${gameState.cannonPercent}%` }}></div>
+
+          {/* 敵城HP */}
+          <div className="w-20 md:w-28 shrink-0">
+            <div className="text-[8px] md:text-[10px] font-black text-red-400 text-center mb-0.5 flex items-center justify-center gap-0.5">
+              <span className="inline-block w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span> 敵城
+            </div>
+            <div className="w-full bg-gray-700 h-2.5 md:h-3 rounded-full border border-gray-600 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-300 rounded-full" style={{ width: `${gameState.baseHpPercent}%` }}></div>
+            </div>
+          </div>
+
+          {/* にゃんこ砲 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[8px] md:text-[10px] text-cyan-400 font-black flex items-center gap-0.5 truncate"><Zap size={12} strokeWidth={3} className="shrink-0" /> にゃんこ砲</span>
+              <span className={`text-[8px] md:text-[10px] font-black ${gameState.canFireCannon ? 'text-cyan-300 animate-pulse' : 'text-gray-400'}`}>
+                {gameState.canFireCannon ? '発射可能！' : `${Math.floor(gameState.cannonPercent)}%`}
+              </span>
+            </div>
+            <div className="w-full bg-gray-700 h-2.5 md:h-3 rounded-full border border-gray-600 overflow-hidden">
+              <div className={`h-full transition-all duration-100 rounded-full ${gameState.canFireCannon ? 'bg-gradient-to-r from-cyan-400 to-blue-400 animate-pulse' : 'bg-gradient-to-r from-blue-700 to-blue-500'}`} style={{ width: `${gameState.cannonPercent}%` }}></div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 敵城HPバー */}
-      <div className="absolute top-16 md:top-20 z-10 w-48 md:w-64 text-center">
-        <span className="bg-black text-white text-[9px] md:text-[10px] font-black px-2 py-0.5 rounded-t-lg border-x-2 border-t-2 border-black">敵のお城</span>
-        <div className="w-full bg-gray-800 h-2 md:h-3 rounded-b-lg rounded-tr-lg border-2 border-black overflow-hidden shadow-[2px_4px_0_rgba(0,0,0,0.5)]">
-          <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${gameState.baseHpPercent}%` }}></div>
-        </div>
-      </div>
-
-      {/* ゲーム画面 (Canvas) */}
-      <div className="w-full max-w-5xl bg-black relative border-x-0 md:border-x-8 border-black flex-grow flex items-center">
-        <canvas ref={canvasRef} width={1000} height={450} className="w-full h-auto block cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }} />
+      {/* ===== ゲーム画面 (Canvas) ===== */}
+      <div className="w-full flex-1 bg-black relative flex items-center justify-center min-h-0 overflow-hidden">
+        <canvas ref={canvasRef} width={1000} height={450} className="w-full h-full block cursor-grab active:cursor-grabbing" style={{ touchAction: 'none', objectFit: 'contain' }} />
         {/* 一時停止オーバーレイ */}
         {gameState.isPaused && (
-          <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-30 cursor-pointer" onClick={() => { if (engineRef.current) engineRef.current.togglePause(); }}>
-            <Play size={80} className="text-white opacity-80 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" fill="white" />
-            <span className="text-white text-3xl md:text-5xl font-black mt-4 drop-shadow-[0_4px_0_rgba(0,0,0,1)]" style={{ WebkitTextStroke: '2px black' }}>一時停止中</span>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-30 cursor-pointer" onClick={() => { if (engineRef.current) engineRef.current.togglePause(); }}>
+            <div className="w-24 h-24 md:w-32 md:h-32 bg-white/20 rounded-full flex items-center justify-center border-4 border-white/40 shadow-[0_0_40px_rgba(255,255,255,0.2)]">
+              <Play size={50} className="text-white ml-2" fill="white" />
+            </div>
+            <span className="text-white text-2xl md:text-4xl font-black mt-6 drop-shadow-[0_4px_0_rgba(0,0,0,1)]" style={{ WebkitTextStroke: '2px black' }}>一時停止中</span>
+            <span className="text-gray-300 text-xs md:text-sm mt-2 font-bold">タップで再開</span>
           </div>
         )}
         {/* 倍速インジケーター */}
         {gameState.gameSpeed > 1 && !gameState.isPaused && (
-          <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs md:text-sm font-black px-2 py-1 rounded-lg border-2 border-black shadow-[2px_2px_0_rgba(0,0,0,1)] z-20 flex items-center gap-1 animate-pulse">
+          <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-xs md:text-sm font-black px-2.5 py-1 rounded-lg border-2 border-orange-700 shadow-[2px_2px_0_rgba(0,0,0,0.5)] z-20 flex items-center gap-1">
             <FastForward size={14} strokeWidth={3} /> {gameState.gameSpeed}x
           </div>
         )}
       </div>
 
-      {/* コントロールパネル */}
-      <div className="w-full max-w-5xl bg-gray-200 p-2 md:p-3 flex gap-2 md:gap-3 border-t-8 border-black h-40 md:h-48 z-10 shadow-[inset_0_10px_10px_rgba(0,0,0,0.1)]">
+      {/* ===== コントロールパネル ===== */}
+      <div className="w-full bg-gradient-to-t from-gray-800 to-gray-900 px-2 md:px-3 py-2 md:py-3 flex gap-2 md:gap-3 border-t-4 border-yellow-500 z-10 shrink-0" style={{ height: 'clamp(130px, 22vh, 200px)' }}>
 
-        <div className="flex flex-col gap-2 md:gap-3 shrink-0 w-24 md:w-28">
+        {/* 左側: 働きネコ & にゃんこ砲 */}
+        <div className="flex flex-col gap-1.5 md:gap-2 shrink-0 w-20 md:w-24">
           <button
             onClick={() => { if (engineRef.current) engineRef.current.upgradeWallet(); }}
             disabled={gameState.status !== 'playing' || gameState.walletCost === null || gameState.money < gameState.walletCost}
-            className="flex-1 flex flex-col items-center justify-center rounded-xl border-4 border-black transition-all p-1
-              bg-green-400 hover:bg-green-300 shadow-[0_4px_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none disabled:bg-gray-400 disabled:shadow-none"
+            className="flex-1 flex flex-col items-center justify-center rounded-xl border-3 md:border-4 border-black transition-all p-1
+              bg-gradient-to-b from-green-400 to-green-500 hover:from-green-300 hover:to-green-400 shadow-[0_4px_0_#166534] active:translate-y-1 active:shadow-none disabled:from-gray-500 disabled:to-gray-600 disabled:shadow-none disabled:border-gray-600"
           >
-            <span className="text-[10px] md:text-[11px] font-black text-black">働きネコUP</span>
-            {gameState.walletCost ? <span className="text-white text-[10px] md:text-xs font-black bg-black px-2 rounded-full mt-0.5 md:mt-1 border-2 border-green-800">{gameState.walletCost}円</span> : <span className="text-red-600 font-black text-[10px] md:text-xs mt-1">MAX</span>}
+            <span className="text-[9px] md:text-[11px] font-black text-black leading-none">働きネコ</span>
+            <span className="text-[8px] md:text-[10px] font-black text-black leading-none">UP</span>
+            {gameState.walletCost
+              ? <span className="text-white text-[8px] md:text-[10px] font-black bg-black/70 px-1.5 rounded-full mt-0.5">{gameState.walletCost}円</span>
+              : <span className="text-yellow-300 font-black text-[9px] md:text-[10px] mt-0.5">MAX</span>}
           </button>
 
           <button
             onClick={() => { if (engineRef.current) engineRef.current.fireCannon(); }}
             disabled={gameState.status !== 'playing' || !gameState.canFireCannon}
-            className={`flex-1 flex flex-col items-center justify-center rounded-xl border-4 border-black transition-all p-1
-              ${gameState.canFireCannon ? 'bg-blue-400 text-white shadow-[0_4px_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none animate-pulse' : 'bg-gray-400 text-gray-600 shadow-none'}
+            className={`flex-1 flex flex-col items-center justify-center rounded-xl border-3 md:border-4 border-black transition-all p-1
+              ${gameState.canFireCannon
+                ? 'bg-gradient-to-b from-cyan-400 to-blue-500 shadow-[0_4px_0_#1e3a5f] active:translate-y-1 active:shadow-none'
+                : 'bg-gradient-to-b from-gray-500 to-gray-600 shadow-none border-gray-600'}
             `}
           >
-            <Zap size={20} className={gameState.canFireCannon ? 'text-yellow-300 fill-current' : 'text-gray-500'} strokeWidth={3} />
-            <span className="text-[10px] md:text-[11px] font-black text-black mt-0.5 md:mt-1">にゃんこ砲</span>
+            <Zap size={18} className={gameState.canFireCannon ? 'text-yellow-300 fill-current animate-bounce' : 'text-gray-400'} strokeWidth={3} />
+            <span className={`text-[8px] md:text-[10px] font-black mt-0.5 leading-none ${gameState.canFireCannon ? 'text-white' : 'text-gray-400'}`}>にゃんこ砲</span>
           </button>
         </div>
 
-        {/* 右側：出撃パネル */}
-        <div className="flex-grow overflow-x-auto pb-1 md:pb-2 custom-scrollbar bg-white rounded-2xl border-4 border-black p-1 md:p-2 shadow-[inset_4px_4px_0_rgba(0,0,0,0.05)]">
-          <div className="grid grid-rows-2 grid-flow-col gap-1.5 md:gap-2 h-full min-w-max">
+        {/* 右側: 出撃パネル */}
+        <div className="flex-grow overflow-x-auto custom-scrollbar bg-gray-800/50 rounded-xl border-2 md:border-3 border-gray-600 p-1 md:p-1.5 min-w-0">
+          <div className="grid grid-rows-2 grid-flow-col gap-1 md:gap-1.5 h-full min-w-max">
             {saveData.deck.map(unitId => {
               const unit = PLAYER_UNITS[unitId];
               const lv = saveData.levels[unitId] || 1;
@@ -835,32 +865,44 @@ export default function NyanDefenseApp() {
               const isCoolingDown = currentCooldown > 0;
               const canSpawn = isAffordable && !isCoolingDown && gameState.status === 'playing';
 
-              let borderColor = 'border-black';
-              if (unit.rarity === 'super') borderColor = 'border-blue-500';
-              if (unit.rarity === 'uber') borderColor = 'border-red-500';
-              if (unit.rarity === 'legend') borderColor = 'border-purple-500';
+              const rarityGlow = unit.rarity === 'legend' ? 'shadow-[0_0_8px_rgba(168,85,247,0.6)]'
+                : unit.rarity === 'uber' ? 'shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                  : unit.rarity === 'super' ? 'shadow-[0_0_8px_rgba(59,130,246,0.5)]'
+                    : '';
+              const rarityBorderActive = unit.rarity === 'legend' ? 'border-purple-400'
+                : unit.rarity === 'uber' ? 'border-red-400'
+                  : unit.rarity === 'super' ? 'border-blue-400'
+                    : 'border-gray-400';
 
               return (
                 <button
                   key={unit.id}
                   onClick={() => { if (engineRef.current) engineRef.current.spawnPlayer(unit.id); }}
                   disabled={!canSpawn}
-                  className={`relative flex flex-col items-center justify-between rounded-xl border-4 w-16 md:w-20 h-full overflow-hidden transition-all bg-gray-100
-                    ${canSpawn ? `hover:bg-white shadow-[2px_3px_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none ${borderColor}` : `bg-gray-300 border-gray-400 shadow-none`}
+                  className={`relative flex flex-col items-center justify-center rounded-lg border-2 md:border-3 w-16 md:w-20 h-full overflow-hidden transition-all
+                    ${canSpawn
+                      ? `bg-gradient-to-b from-gray-100 to-gray-200 hover:from-white hover:to-gray-100 ${rarityBorderActive} ${rarityGlow} active:scale-95`
+                      : 'bg-gray-700 border-gray-600 shadow-none'}
                   `}
                 >
-                  <div className={`flex justify-center items-center w-full h-full pb-2 transition-transform ${canSpawn ? 'scale-100' : 'scale-90 opacity-50'}`}>
-                    <UnitIcon id={form.drawId} size={45} animate={canSpawn} />
+                  <div className={`flex justify-center items-center w-full flex-1 transition-transform ${canSpawn ? 'scale-100' : 'scale-75 opacity-40'}`}>
+                    <UnitIcon id={form.drawId} size={42} animate={canSpawn} />
                   </div>
 
-                  <div className={`absolute bottom-0 w-full bg-black bg-opacity-80 text-[9px] md:text-[10px] font-black text-center py-0.5 z-30 ${!isAffordable && !isCoolingDown ? 'text-red-400' : 'text-white'}`}>
+                  <div className={`w-full text-[8px] md:text-[9px] font-black text-center py-0.5 z-30 rounded-b-md
+                    ${canSpawn
+                      ? (!isAffordable ? 'bg-red-600 text-red-200' : 'bg-black/80 text-white')
+                      : 'bg-black/60 text-gray-400'}`}>
                     {form.cost || unit.cost}円
                   </div>
-                  <div className="absolute top-0 right-0 bg-yellow-400 text-black text-[8px] md:text-[9px] font-black px-1 rounded-bl-lg border-b-2 border-l-2 border-black z-30">Lv.{saveData.levels[unit.id]}</div>
+
+                  <div className={`absolute top-0 right-0 text-[7px] md:text-[8px] font-black px-1 rounded-bl-md z-30 ${canSpawn ? 'bg-yellow-400 text-black' : 'bg-gray-600 text-gray-400'}`}>
+                    {lv}
+                  </div>
 
                   {isCoolingDown && (
-                    <div className="absolute inset-0 bg-black bg-opacity-60 z-20 flex items-start justify-center">
-                      <div className="w-full bg-yellow-400 opacity-30" style={{ height: `${cooldownPercent}%` }}></div>
+                    <div className="absolute inset-0 bg-black/60 z-20 flex flex-col items-center justify-end overflow-hidden rounded-lg">
+                      <div className="w-full bg-yellow-400/30 transition-all" style={{ height: `${cooldownPercent}%` }}></div>
                     </div>
                   )}
                 </button>
@@ -869,12 +911,15 @@ export default function NyanDefenseApp() {
           </div>
         </div>
       </div>
+
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar { height: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 8px; border: 2px solid #000; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #fBBF24; border-radius: 8px; border: 2px solid #000; }
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; border-radius: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #fBBF24; border-radius: 8px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #F59E0B; }
-      `}</style>
+        .custom-scrollbar { scrollbar-width: thin; scrollbar-color: #fBBF24 transparent; }
+      `}
+      </style>
     </div>
   );
 }

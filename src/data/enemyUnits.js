@@ -14,5 +14,17 @@ export const ENEMY_UNITS = {
     rhino: { id: 'rhino', hp: 4000, attack: 100, range: 40, speed: 0.8, size: 60, kb: 1, attackFreq: 1500, area: false, reward: 300, xp: 1500 },
     ostrich: { id: 'ostrich', hp: 8000, attack: 150, range: 50, speed: 2.5, size: 70, kb: 5, attackFreq: 300, area: true, reward: 1200, xp: 4500 },
     alien: { id: 'alien', hp: 3000, attack: 150, range: 200, speed: 1.0, size: 45, kb: 3, attackFreq: 1500, area: true, reward: 500, xp: 1800 },
-    bunbun: { id: 'bunbun', hp: 30000, attack: 500, range: 60, speed: 1.2, size: 110, kb: 2, attackFreq: 500, area: true, reward: 2000, xp: 10000 }
+    bunbun: { id: 'bunbun', hp: 30000, attack: 500, range: 60, speed: 1.2, size: 110, kb: 2, attackFreq: 500, area: true, reward: 2000, xp: 10000 },
+
+    // ======== 追加敵キャラ ========
+    octopus: { id: 'octopus', hp: 500, attack: 35, range: 40, speed: 1.0, size: 40, kb: 4, attackFreq: 900, area: false, reward: 60, xp: 220 },
+    snail: { id: 'snail', hp: 1200, attack: 15, range: 40, speed: 0.3, size: 35, kb: 1, attackFreq: 2000, area: false, reward: 90, xp: 350 },
+    bat: { id: 'bat', hp: 200, attack: 55, range: 40, speed: 2.8, size: 30, kb: 5, attackFreq: 600, area: false, reward: 55, xp: 200 },
+    wolf: { id: 'wolf', hp: 1500, attack: 100, range: 50, speed: 2.2, size: 50, kb: 3, attackFreq: 700, area: false, reward: 250, xp: 900 },
+    dragonEnemy: { id: 'dragonEnemy', hp: 6000, attack: 250, range: 200, speed: 0.6, size: 80, kb: 2, attackFreq: 3000, area: true, reward: 600, xp: 2500 },
+    demonEnemy: { id: 'demonEnemy', hp: 4000, attack: 200, range: 100, speed: 1.0, size: 60, kb: 2, attackFreq: 1500, area: true, reward: 450, xp: 2000 },
+    golem: { id: 'golem', hp: 15000, attack: 100, range: 40, speed: 0.3, size: 90, kb: 1, attackFreq: 3000, area: true, reward: 700, xp: 3500 },
+    wyvern: { id: 'wyvern', hp: 3000, attack: 180, range: 150, speed: 2.0, size: 55, kb: 4, attackFreq: 1200, area: true, reward: 350, xp: 1500 },
+    spider: { id: 'spider', hp: 700, attack: 45, range: 40, speed: 1.6, size: 35, kb: 3, attackFreq: 500, area: false, reward: 80, xp: 300 },
+    cyclops: { id: 'cyclops', hp: 20000, attack: 400, range: 80, speed: 0.5, size: 100, kb: 1, attackFreq: 2500, area: true, reward: 1500, xp: 8000 }
 };

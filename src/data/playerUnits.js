@@ -225,6 +225,84 @@ export const PLAYER_UNITS = {
             { form: 2, name: '火焔鳳凰ネコ', levelReq: 10, hp: 20000, attack: 7000, range: 380, size: 80 },
             { form: 3, name: '永遠の不死鳥', levelReq: 25, hp: 40000, attack: 14000, range: 420, size: 90 }
         ]
+    },
+
+    // ======== 追加キャラ: キモカワ系 ========
+    eyeball: {
+        id: 'eyeball', name: 'ネコ目玉', cost: 350, hp: 300, attack: 35, range: 140, speed: -1.5, cooldown: 3000, size: 35, kb: 4, attackFreq: 1200, area: false, baseUpgradeCost: 600, rarity: 'rare', evolutions: [
+            { form: 2, name: '邪眼ネコ', levelReq: 10, hp: 600, attack: 70, range: 180, size: 40 },
+            { form: 3, name: '千眼ネコ', levelReq: 25, hp: 1200, attack: 140, range: 220, size: 50, area: true }
+        ]
+    },
+    mushroom: {
+        id: 'mushroom', name: 'ネコキノコ', cost: 200, hp: 400, attack: 20, range: 40, speed: -0.8, cooldown: 2500, size: 30, kb: 2, attackFreq: 1500, area: false, baseUpgradeCost: 400, rarity: 'rare', evolutions: [
+            { form: 2, name: 'ネコ毒キノコ', levelReq: 10, hp: 800, attack: 40, size: 35 },
+            { form: 3, name: 'キノコ大王ネコ', levelReq: 25, hp: 1600, attack: 80, size: 45, area: true }
+        ]
+    },
+    jellyfish: {
+        id: 'jellyfish', name: 'ネコクラゲ', cost: 450, hp: 200, attack: 50, range: 170, speed: -0.7, cooldown: 4500, size: 40, kb: 5, attackFreq: 2000, area: true, baseUpgradeCost: 700, rarity: 'rare', evolutions: [
+            { form: 2, name: 'ネコ電気クラゲ', levelReq: 10, hp: 400, attack: 100, range: 200, size: 45 },
+            { form: 3, name: '深海王クラゲネコ', levelReq: 25, hp: 800, attack: 200, range: 250, size: 55 }
+        ]
+    },
+    caterpillar: {
+        id: 'caterpillar', name: 'ネコ芋虫', cost: 150, hp: 600, attack: 8, range: 40, speed: -0.5, cooldown: 2000, size: 25, kb: 1, attackFreq: 1500, area: false, baseUpgradeCost: 350, rarity: 'rare', evolutions: [
+            { form: 2, name: 'ネコ蛹', levelReq: 10, hp: 1200, attack: 15, size: 30 },
+            { form: 3, name: '大蛾ネコ', levelReq: 25, hp: 2400, attack: 200, size: 50, area: true, range: 200, speed: -2.0 }
+        ]
+    },
+
+    // ======== 追加キャラ: かっこいい系 ========
+    demon: {
+        id: 'demon', name: 'ネコデーモン', cost: 1300, hp: 1000, attack: 350, range: 80, speed: -1.8, cooldown: 10000, size: 50, kb: 2, attackFreq: 1800, area: true, baseUpgradeCost: 2200, rarity: 'super', evolutions: [
+            { form: 2, name: 'ネコ大悪魔', levelReq: 10, hp: 2000, attack: 700, range: 100, size: 55 },
+            { form: 3, name: '魔王ネコ', levelReq: 25, hp: 4000, attack: 1400, range: 120, size: 65 }
+        ]
+    },
+    darkknight: {
+        id: 'darkknight', name: 'ネコ暗黒騎士', cost: 1500, hp: 1800, attack: 200, range: 50, speed: -1.0, cooldown: 9000, size: 45, kb: 1, attackFreq: 1500, area: false, baseUpgradeCost: 2500, rarity: 'super', evolutions: [
+            { form: 2, name: 'ネコ漆黒騎士', levelReq: 10, hp: 3600, attack: 400, size: 50 },
+            { form: 3, name: '深淵騎士ネコ', levelReq: 25, hp: 7200, attack: 800, size: 60, area: true }
+        ]
+    },
+    thunder: {
+        id: 'thunder', name: 'ネコ雷帝', cost: 4000, hp: 4000, attack: 1600, range: 350, speed: -1.0, cooldown: 35000, size: 65, kb: 3, attackFreq: 4500, area: true, baseUpgradeCost: 7000, rarity: 'uber', evolutions: [
+            { form: 2, name: 'ネコ雷神王', levelReq: 10, hp: 8000, attack: 3200, range: 380, size: 70 },
+            { form: 3, name: '万雷帝ネコ', levelReq: 25, hp: 16000, attack: 6400, range: 420, size: 80 }
+        ]
+    },
+    spacePirate: {
+        id: 'spacePirate', name: 'ネコ宇宙海賊', cost: 3200, hp: 3500, attack: 1000, range: 280, speed: -2.0, cooldown: 25000, size: 55, kb: 4, attackFreq: 2500, area: true, baseUpgradeCost: 5500, rarity: 'uber', evolutions: [
+            { form: 2, name: 'ネコ星間海賊', levelReq: 10, hp: 7000, attack: 2000, range: 310, size: 60 },
+            { form: 3, name: '銀河海賊王ネコ', levelReq: 25, hp: 14000, attack: 4000, range: 360, size: 70 }
+        ]
+    },
+
+    // ======== 追加キャラ: キモカワ+かっこいいミックス ========
+    slime: {
+        id: 'slime', name: 'ネコスライム', cost: 100, hp: 150, attack: 5, range: 40, speed: -0.8, cooldown: 1500, size: 25, kb: 5, attackFreq: 800, area: false, baseUpgradeCost: 200, rarity: 'basic', evolutions: [
+            { form: 2, name: 'ネコメタルスライム', levelReq: 10, hp: 300, attack: 10, size: 28 },
+            { form: 3, name: 'キングスライムネコ', levelReq: 25, hp: 800, attack: 50, size: 40, area: true }
+        ]
+    },
+    skull: {
+        id: 'skull', name: 'ネコドクロ', cost: 500, hp: 250, attack: 80, range: 100, speed: -1.5, cooldown: 5000, size: 35, kb: 3, attackFreq: 1500, area: false, baseUpgradeCost: 800, rarity: 'rare', evolutions: [
+            { form: 2, name: 'ネコリーパー', levelReq: 10, hp: 500, attack: 160, range: 130, size: 40 },
+            { form: 3, name: '死神ネコ', levelReq: 25, hp: 1000, attack: 320, range: 160, size: 50, area: true }
+        ]
+    },
+    mecha: {
+        id: 'mecha', name: 'ネコメカ', cost: 1400, hp: 1500, attack: 300, range: 180, speed: -0.8, cooldown: 12000, size: 55, kb: 1, attackFreq: 2500, area: true, baseUpgradeCost: 2500, rarity: 'super', evolutions: [
+            { form: 2, name: 'ネコメカ・零式', levelReq: 10, hp: 3000, attack: 600, range: 220, size: 60 },
+            { form: 3, name: '超合金ネコメカ', levelReq: 25, hp: 6000, attack: 1200, range: 260, size: 70 }
+        ]
+    },
+    odin: {
+        id: 'odin', name: '神槍ネコオーディン', cost: 5000, hp: 6000, attack: 2200, range: 360, speed: -0.9, cooldown: 42000, size: 75, kb: 3, attackFreq: 5000, area: true, baseUpgradeCost: 9000, rarity: 'uber', evolutions: [
+            { form: 2, name: '全知全能オーディン', levelReq: 10, hp: 12000, attack: 4400, range: 400, size: 80 },
+            { form: 3, name: '終焉神オーディン', levelReq: 25, hp: 24000, attack: 8800, range: 450, size: 90 }
+        ]
     }
 };
 

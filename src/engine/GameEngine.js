@@ -271,15 +271,15 @@ export class GameEngine {
     if (this.enemySpawnTimer > spawnInterval) {
       this.enemySpawnTimer = 0; let r = Math.random();
       if (this.stage.id <= 2) {
-        if (r < 0.1) this.spawnEnemy('hippo'); else if (r < 0.3) this.spawnEnemy('seal'); else if (r < 0.6) this.spawnEnemy('snake'); else this.spawnEnemy('dog');
+        if (r < 0.08) this.spawnEnemy('hippo'); else if (r < 0.2) this.spawnEnemy('seal'); else if (r < 0.35) this.spawnEnemy('octopus'); else if (r < 0.5) this.spawnEnemy('snail'); else if (r < 0.7) this.spawnEnemy('snake'); else this.spawnEnemy('dog');
       } else if (this.stage.id <= 4) {
-        if (r < 0.1) this.spawnEnemy('kangaroo'); else if (r < 0.3) this.spawnEnemy('croco'); else if (r < 0.5) this.spawnEnemy('seal'); else if (r < 0.8) this.spawnEnemy('snake'); else this.spawnEnemy('dog');
+        if (r < 0.08) this.spawnEnemy('kangaroo'); else if (r < 0.18) this.spawnEnemy('wolf'); else if (r < 0.3) this.spawnEnemy('croco'); else if (r < 0.42) this.spawnEnemy('bat'); else if (r < 0.55) this.spawnEnemy('spider'); else if (r < 0.7) this.spawnEnemy('octopus'); else if (r < 0.85) this.spawnEnemy('snake'); else this.spawnEnemy('dog');
       } else if (this.stage.id <= 6) {
-        if (r < 0.1) this.spawnEnemy('bear'); else if (r < 0.3) this.spawnEnemy('elephant'); else if (r < 0.5) this.spawnEnemy('kangaroo'); else if (r < 0.7) this.spawnEnemy('moth'); else this.spawnEnemy('penguin');
+        if (r < 0.08) this.spawnEnemy('bear'); else if (r < 0.18) this.spawnEnemy('demonEnemy'); else if (r < 0.28) this.spawnEnemy('elephant'); else if (r < 0.4) this.spawnEnemy('wolf'); else if (r < 0.55) this.spawnEnemy('wyvern'); else if (r < 0.7) this.spawnEnemy('kangaroo'); else if (r < 0.85) this.spawnEnemy('bat'); else this.spawnEnemy('spider');
       } else if (this.stage.id <= 8) {
-        if (r < 0.1) this.spawnEnemy('ostrich'); else if (r < 0.3) this.spawnEnemy('rhino'); else if (r < 0.5) this.spawnEnemy('alien'); else this.spawnEnemy('bear');
+        if (r < 0.08) this.spawnEnemy('golem'); else if (r < 0.18) this.spawnEnemy('dragonEnemy'); else if (r < 0.28) this.spawnEnemy('ostrich'); else if (r < 0.4) this.spawnEnemy('demonEnemy'); else if (r < 0.55) this.spawnEnemy('wyvern'); else if (r < 0.7) this.spawnEnemy('alien'); else this.spawnEnemy('wolf');
       } else {
-        if (r < 0.1) this.spawnEnemy('face'); else if (r < 0.3) this.spawnEnemy('ostrich'); else if (r < 0.5) this.spawnEnemy('alien'); else this.spawnEnemy('rhino');
+        if (r < 0.05) this.spawnEnemy('cyclops'); else if (r < 0.15) this.spawnEnemy('golem'); else if (r < 0.25) this.spawnEnemy('dragonEnemy'); else if (r < 0.4) this.spawnEnemy('demonEnemy'); else if (r < 0.55) this.spawnEnemy('wyvern'); else if (r < 0.7) this.spawnEnemy('alien'); else this.spawnEnemy('rhino');
       }
     }
 
