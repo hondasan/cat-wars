@@ -16,6 +16,10 @@ export class GameEngine {
     this.money = 0; this.sessionXp = 0; this.walletLevelIndex = 0;
     this.units = []; this.enemies = []; this.effects = []; this.particles = []; this.souls = [];
 
+    // --- 倍速 & 一時停止 ---
+    this.gameSpeed = 1;
+    this.isPaused = false;
+
     this.screenShakeTime = 0; this.screenShakeIntensity = 0;
     this.cannonPower = 0; this.cannonMax = 15000; this.isFiringCannon = false; this.cannonTimer = 0;
 
@@ -114,9 +118,13 @@ export class GameEngine {
       cooldowns: { ...this.cooldowns }, cannonPercent: Math.min(100, (this.cannonPower / this.cannonMax) * 100),
       canFireCannon: this.cannonPower >= this.cannonMax, status: this.status, sessionXp: this.sessionXp,
       bossSpawned: this.bossSpawned, stageName: this.stage.name,
-      baseHpPercent: Math.max(0, (this.enemyBase.hp / this.enemyBase.maxHp) * 100)
+      baseHpPercent: Math.max(0, (this.enemyBase.hp / this.enemyBase.maxHp) * 100),
+      gameSpeed: this.gameSpeed, isPaused: this.isPaused
     });
   }
+
+  setSpeed(speed) { this.gameSpeed = Math.max(1, Math.min(5, speed)); this.syncUI(); }
+  togglePause() { this.isPaused = !this.isPaused; this.syncUI(); }
 
   shakeScreen(time, intensity) { this.screenShakeTime = time; this.screenShakeIntensity = intensity; }
 
@@ -231,8 +239,11 @@ export class GameEngine {
 
   loop(currentTime) {
     if (!this.isRunning) return;
-    const dt = currentTime - this.lastTime; this.lastTime = currentTime;
-    if (this.status === 'playing') this.update(dt);
+    const rawDt = currentTime - this.lastTime; this.lastTime = currentTime;
+    if (this.status === 'playing' && !this.isPaused) {
+      const dt = rawDt * this.gameSpeed;
+      this.update(dt);
+    }
     this.draw();
     requestAnimationFrame((t) => this.loop(t));
   }

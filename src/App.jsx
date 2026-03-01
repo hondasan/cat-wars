@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUpCircle, Coins, Zap, Play, RotateCcw, ChevronLeft, ChevronRight, Sword, Gift, Lock, Shield, Users, Plus, X, GripVertical } from 'lucide-react';
+import { ArrowUpCircle, Coins, Zap, Play, RotateCcw, ChevronLeft, ChevronRight, Sword, Gift, Lock, Shield, Users, Plus, X, GripVertical, Pause, FastForward } from 'lucide-react';
 import { LOCAL_STORAGE_KEY, WALLET_LEVELS } from './data/walletLevels.js';
 import { STAGES } from './data/stages.js';
 import { PLAYER_UNITS, getUnitForm } from './data/playerUnits.js';
@@ -98,7 +98,8 @@ export default function NyanDefenseApp() {
 
   const [gameState, setGameState] = useState({
     money: 0, maxMoney: 500, walletLevel: 1, walletCost: 100, cooldowns: {},
-    cannonPercent: 0, canFireCannon: false, status: 'playing', sessionXp: 0, bossSpawned: false, stageName: '', baseHpPercent: 100
+    cannonPercent: 0, canFireCannon: false, status: 'playing', sessionXp: 0, bossSpawned: false, stageName: '', baseHpPercent: 100,
+    gameSpeed: 1, isPaused: false
   });
 
   const stopEngineAndGoTo = (state) => {
@@ -731,9 +732,31 @@ export default function NyanDefenseApp() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center w-2/12 -translate-y-2">
+        <div className="flex flex-col items-center w-3/12 -translate-y-2">
           <span className="text-black font-black text-[10px] md:text-sm tracking-widest bg-white px-3 py-1 rounded-full border-4 border-black shadow-[2px_2px_0_rgba(0,0,0,1)] -mt-6 z-20 absolute top-2 whitespace-nowrap">{gameState.stageName}</span>
           <span className="text-blue-600 text-sm md:text-lg font-black flex items-center gap-1 mt-4"><Sword size={14} strokeWidth={3} /> {gameState.sessionXp.toLocaleString()}</span>
+          {/* 倍速 & 一時停止 */}
+          <div className="flex items-center gap-1 mt-1">
+            <button
+              onClick={() => { if (engineRef.current) engineRef.current.togglePause(); }}
+              className={`w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-lg border-2 border-black transition-all
+                ${gameState.isPaused ? 'bg-yellow-400 shadow-[0_2px_0_rgba(0,0,0,1)]' : 'bg-white shadow-[0_2px_0_rgba(0,0,0,1)] hover:bg-gray-100'}
+                active:translate-y-0.5 active:shadow-none`}
+            >
+              {gameState.isPaused ? <Play size={14} strokeWidth={3} fill="black" /> : <Pause size={14} strokeWidth={3} />}
+            </button>
+            {[1, 2, 3, 5].map(s => (
+              <button
+                key={s}
+                onClick={() => { if (engineRef.current) engineRef.current.setSpeed(s); }}
+                className={`h-7 md:h-8 px-1.5 md:px-2 flex items-center justify-center rounded-lg border-2 border-black text-[9px] md:text-[10px] font-black transition-all
+                  ${gameState.gameSpeed === s ? 'bg-orange-400 text-white shadow-[0_2px_0_rgba(0,0,0,1)]' : 'bg-white shadow-[0_2px_0_rgba(0,0,0,1)] hover:bg-gray-100'}
+                  active:translate-y-0.5 active:shadow-none`}
+              >
+                {s === 1 ? '1x' : `${s}x`}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="w-4/12 flex flex-col items-end">
@@ -758,6 +781,19 @@ export default function NyanDefenseApp() {
       {/* ゲーム画面 (Canvas) */}
       <div className="w-full max-w-5xl bg-black relative border-x-0 md:border-x-8 border-black flex-grow flex items-center">
         <canvas ref={canvasRef} width={1000} height={450} className="w-full h-auto block cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }} />
+        {/* 一時停止オーバーレイ */}
+        {gameState.isPaused && (
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center z-30 cursor-pointer" onClick={() => { if (engineRef.current) engineRef.current.togglePause(); }}>
+            <Play size={80} className="text-white opacity-80 drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]" fill="white" />
+            <span className="text-white text-3xl md:text-5xl font-black mt-4 drop-shadow-[0_4px_0_rgba(0,0,0,1)]" style={{ WebkitTextStroke: '2px black' }}>一時停止中</span>
+          </div>
+        )}
+        {/* 倍速インジケーター */}
+        {gameState.gameSpeed > 1 && !gameState.isPaused && (
+          <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs md:text-sm font-black px-2 py-1 rounded-lg border-2 border-black shadow-[2px_2px_0_rgba(0,0,0,1)] z-20 flex items-center gap-1 animate-pulse">
+            <FastForward size={14} strokeWidth={3} /> {gameState.gameSpeed}x
+          </div>
+        )}
       </div>
 
       {/* コントロールパネル */}
