@@ -1,6 +1,7 @@
 import { PLAYER_UNITS, getUnitForm } from '../data/playerUnits.js';
 import { ENEMY_UNITS } from '../data/enemyUnits.js';
 import { WALLET_LEVELS } from '../data/walletLevels.js';
+import { calcTreasureEffects } from '../data/treasures.js';
 import { drawEntityShape } from './EntityRenderer.js';
 import { sfx } from './SoundManager.js';
 
@@ -149,14 +150,17 @@ export class GameEngine {
     const data = PLAYER_UNITS[typeId];
     const currentCooldown = this.cooldowns[typeId] || 0;
     if (this.money >= data.cost && currentCooldown <= 0 && this.status === 'playing') {
-      this.money -= data.cost; this.cooldowns[typeId] = data.cooldown;
+      const treasureEffects = calcTreasureEffects(this.saveData.collectedTreasures || []);
+      this.money -= data.cost; this.cooldowns[typeId] = data.cooldown * treasureEffects.cdMul;
       const lv = this.saveData.levels[typeId] || 1;
       const form = getUnitForm(typeId, lv);
-      const actualHp = form.hp * (1 + (lv - 1) * 0.2);
-      const actualAttack = form.attack * (1 + (lv - 1) * 0.2);
+      const actualHp = form.hp * (1 + (lv - 1) * 0.2) * treasureEffects.hpMul;
+      const actualAttack = form.attack * (1 + (lv - 1) * 0.2) * treasureEffects.atkMul;
+      const actualSpeed = form.speed * treasureEffects.spdMul;
 
       this.units.push({
         ...data, ...form, hp: actualHp, maxHp: actualHp, attack: actualAttack, lastKbHp: actualHp,
+        speed: actualSpeed,
         x: this.playerBase.x - form.size, y: this.groundY - form.size + (Math.random() * 16 - 8),
         state: 'walk', attackTimer: 0, kbTimer: 0, isForceKb: false,
         drawId: form.drawId, id: typeId,
