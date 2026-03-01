@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowUpCircle, Coins, Zap, Play, RotateCcw, ChevronLeft, ChevronRight, Sword, Gift, Lock, Shield } from 'lucide-react';
+import { ArrowUpCircle, Coins, Zap, Play, RotateCcw, ChevronLeft, ChevronRight, Sword, Gift, Lock, Shield, Users, Plus, X, GripVertical } from 'lucide-react';
 import { LOCAL_STORAGE_KEY, WALLET_LEVELS } from './data/walletLevels.js';
 import { STAGES } from './data/stages.js';
 import { PLAYER_UNITS } from './data/playerUnits.js';
@@ -44,16 +44,19 @@ const getInitialSaveData = () => {
       const defaultLevels = Object.keys(PLAYER_UNITS).reduce((acc, key) => ({ ...acc, [key]: 1 }), {});
       return {
         ...parsed,
-        levels: { ...defaultLevels, ...(parsed.levels || {}) } // 新キャラ追加時のフォールバック
+        levels: { ...defaultLevels, ...(parsed.levels || {}) },
+        deck: parsed.deck || parsed.unlockedUnits || ['basic', 'tank', 'battle', 'ranged', 'cow', 'titan']
       };
     } catch (e) {
       console.error("Failed to parse save data", e);
     }
   }
+  const defaultUnlocked = ['basic', 'tank', 'battle', 'ranged', 'cow', 'titan'];
   return {
     xp: 5000,
     catFood: 3000,
-    unlockedUnits: ['basic', 'tank', 'battle', 'ranged', 'cow', 'titan'],
+    unlockedUnits: defaultUnlocked,
+    deck: [...defaultUnlocked],
     levels: Object.keys(PLAYER_UNITS).reduce((acc, key) => ({ ...acc, [key]: 1 }), {}),
     cannonLv: 1, baseHpLv: 1, maxStageCleared: 0
   };
@@ -175,6 +178,9 @@ export default function NyanDefenseApp() {
           <button onClick={() => setAppState('stageSelect')} className="py-4 bg-orange-500 hover:bg-orange-400 rounded-2xl text-xl md:text-2xl font-black shadow-[0_8px_0_#9a3412] active:translate-y-2 active:shadow-none transition-all border-4 border-black text-white">
             ゲームスタート
           </button>
+          <button onClick={() => setAppState('deck')} className="py-4 bg-purple-500 hover:bg-purple-400 rounded-2xl text-xl md:text-2xl font-black shadow-[0_8px_0_#581c87] active:translate-y-2 active:shadow-none transition-all border-4 border-black flex justify-center items-center gap-2 text-white">
+            編成 <Users size={24} strokeWidth={3} />
+          </button>
           <button onClick={() => stopEngineAndGoTo('upgrade')} className="py-4 bg-blue-500 hover:bg-blue-400 rounded-2xl text-xl md:text-2xl font-black shadow-[0_8px_0_#1e3a8a] active:translate-y-2 active:shadow-none transition-all border-4 border-black flex justify-center items-center gap-2 text-white">
             パワーアップ <ArrowUpCircle size={24} strokeWidth={3} />
           </button>
@@ -191,6 +197,128 @@ export default function NyanDefenseApp() {
           <div className="bg-white text-black p-3 rounded-2xl border-4 border-black shadow-[4px_4px_0_rgba(0,0,0,0.5)] text-center w-36 md:w-44 font-black">
             <p className="text-gray-500 text-xs mb-1">ネコ缶</p>
             <p className="text-xl md:text-2xl text-red-500">{saveData.catFood.toLocaleString()}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (appState === 'deck') {
+    const MAX_DECK = 10;
+    const addToDeck = (unitId) => {
+      if (saveData.deck.length >= MAX_DECK) { sfx.init(); sfx.se('error'); return; }
+      if (saveData.deck.includes(unitId)) return;
+      sfx.init(); sfx.se('spawn');
+      setSaveData(prev => ({ ...prev, deck: [...prev.deck, unitId] }));
+    };
+    const removeFromDeck = (unitId) => {
+      sfx.init(); sfx.se('hit');
+      setSaveData(prev => ({ ...prev, deck: prev.deck.filter(id => id !== unitId) }));
+    };
+    const moveDeck = (idx, dir) => {
+      const newIdx = idx + dir;
+      if (newIdx < 0 || newIdx >= saveData.deck.length) return;
+      sfx.init(); sfx.se('spawn');
+      setSaveData(prev => {
+        const newDeck = [...prev.deck];
+        [newDeck[idx], newDeck[newIdx]] = [newDeck[newIdx], newDeck[idx]];
+        return { ...prev, deck: newDeck };
+      });
+    };
+
+    const rarityBorder = (rarity) => {
+      if (rarity === 'super') return 'border-blue-500';
+      if (rarity === 'uber') return 'border-red-500';
+      if (rarity === 'legend') return 'border-purple-500';
+      return 'border-black';
+    };
+    const rarityBg = (rarity) => {
+      if (rarity === 'super') return 'bg-blue-50';
+      if (rarity === 'uber') return 'bg-red-50';
+      if (rarity === 'legend') return 'bg-purple-50';
+      return 'bg-white';
+    };
+
+    return (
+      <div className="flex flex-col items-center w-full min-h-screen bg-purple-100 text-black font-sans select-none p-4 md:p-6">
+        <div className="w-full max-w-4xl flex justify-between items-center mb-6 bg-white p-3 md:p-4 rounded-2xl border-4 border-black shadow-[4px_4px_0_rgba(0,0,0,1)] sticky top-4 z-50">
+          <button onClick={() => setAppState('title')} className="px-4 py-2 bg-gray-300 hover:bg-gray-200 rounded-xl font-black border-4 border-black shadow-[0_4px_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none flex items-center gap-2">
+            <ChevronLeft strokeWidth={3} /> もどる
+          </button>
+          <h2 className="text-2xl md:text-4xl font-black text-purple-600 drop-shadow-[0_2px_0_rgba(0,0,0,0.2)]">編成</h2>
+          <div className="bg-purple-50 px-3 py-1 rounded-xl border-2 border-black">
+            <p className="text-xs font-black text-gray-500">デッキ</p>
+            <p className="text-lg font-black text-purple-600">{saveData.deck.length}/{MAX_DECK}</p>
+          </div>
+        </div>
+
+        {/* デッキスロット */}
+        <div className="w-full max-w-4xl mb-6">
+          <h3 className="text-lg font-black text-purple-700 mb-3 flex items-center gap-2">
+            <Users size={20} strokeWidth={3} /> 出撃デッキ
+          </h3>
+          <div className="bg-white rounded-2xl border-4 border-black shadow-[4px_4px_0_rgba(0,0,0,1)] p-3 md:p-4">
+            <div className="grid grid-cols-5 md:grid-cols-10 gap-2">
+              {Array.from({ length: MAX_DECK }).map((_, idx) => {
+                const unitId = saveData.deck[idx];
+                if (unitId) {
+                  const unit = PLAYER_UNITS[unitId];
+                  return (
+                    <div key={`slot-${idx}`} className={`relative flex flex-col items-center rounded-xl border-4 ${rarityBorder(unit.rarity)} ${rarityBg(unit.rarity)} p-1 shadow-md`}>
+                      <UnitIcon id={unit.id} size={50} animate={false} />
+                      <p className="text-[8px] md:text-[9px] font-black truncate w-full text-center mt-0.5">{unit.name}</p>
+                      <div className="absolute -top-2 -left-2 bg-purple-500 text-white text-[8px] font-black rounded-full w-5 h-5 flex items-center justify-center border-2 border-black">{idx + 1}</div>
+                      <button onClick={() => removeFromDeck(unitId)} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white rounded-full w-5 h-5 flex items-center justify-center border-2 border-black">
+                        <X size={10} strokeWidth={4} />
+                      </button>
+                      <div className="flex gap-0.5 mt-0.5">
+                        <button onClick={() => moveDeck(idx, -1)} disabled={idx === 0} className="text-[8px] bg-gray-200 hover:bg-gray-300 rounded px-1 disabled:opacity-30">◀</button>
+                        <button onClick={() => moveDeck(idx, 1)} disabled={idx === saveData.deck.length - 1} className="text-[8px] bg-gray-200 hover:bg-gray-300 rounded px-1 disabled:opacity-30">▶</button>
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={`slot-${idx}`} className="flex flex-col items-center justify-center rounded-xl border-4 border-dashed border-gray-300 bg-gray-50 p-1 h-24 md:h-28">
+                    <span className="text-gray-300 text-2xl">+</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* 所持ユニット一覧 */}
+        <div className="w-full max-w-4xl">
+          <h3 className="text-lg font-black text-gray-600 mb-3">所持ユニット</h3>
+          <div className="bg-white rounded-2xl border-4 border-black shadow-[4px_4px_0_rgba(0,0,0,1)] p-3 md:p-4">
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+              {saveData.unlockedUnits.map(unitId => {
+                const unit = PLAYER_UNITS[unitId];
+                const inDeck = saveData.deck.includes(unitId);
+                return (
+                  <button
+                    key={unitId}
+                    onClick={() => inDeck ? removeFromDeck(unitId) : addToDeck(unitId)}
+                    className={`relative flex flex-col items-center rounded-xl border-4 p-1 transition-all
+                      ${inDeck
+                        ? `${rarityBorder(unit.rarity)} ${rarityBg(unit.rarity)} opacity-50 shadow-none`
+                        : `${rarityBorder(unit.rarity)} ${rarityBg(unit.rarity)} hover:scale-105 shadow-[2px_3px_0_rgba(0,0,0,0.5)] active:translate-y-1 active:shadow-none`
+                      }
+                    `}
+                  >
+                    <UnitIcon id={unit.id} size={45} animate={false} />
+                    <p className="text-[8px] md:text-[9px] font-black truncate w-full text-center">{unit.name}</p>
+                    <p className="text-[7px] md:text-[8px] text-gray-500 font-bold">Lv.{saveData.levels[unitId]}</p>
+                    {inDeck && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 rounded-lg">
+                        <span className="bg-purple-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full border-2 border-black">出撃中</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -523,7 +651,7 @@ export default function NyanDefenseApp() {
         {/* 右側：出撃パネル */}
         <div className="flex-grow overflow-x-auto pb-1 md:pb-2 custom-scrollbar bg-white rounded-2xl border-4 border-black p-1 md:p-2 shadow-[inset_4px_4px_0_rgba(0,0,0,0.05)]">
           <div className="grid grid-rows-2 grid-flow-col gap-1.5 md:gap-2 h-full min-w-max">
-            {saveData.unlockedUnits.map(unitId => {
+            {saveData.deck.map(unitId => {
               const unit = PLAYER_UNITS[unitId];
               const currentCooldown = gameState.cooldowns[unit.id] || 0;
               const cooldownPercent = (currentCooldown / unit.cooldown) * 100;
