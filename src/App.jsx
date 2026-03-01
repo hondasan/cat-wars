@@ -4,6 +4,7 @@ import { LOCAL_STORAGE_KEY, WALLET_LEVELS } from './data/walletLevels.js';
 import { STAGES } from './data/stages.js';
 import { PLAYER_UNITS, getUnitForm } from './data/playerUnits.js';
 import { ENEMY_UNITS } from './data/enemyUnits.js';
+import { TREASURES, drawTreasure, rollTreasureDrop } from './data/treasures.js';
 import { drawEntityShape } from './engine/EntityRenderer.js';
 import { sfx } from './engine/SoundManager.js';
 import { GameEngine } from './engine/GameEngine.js';
@@ -36,6 +37,22 @@ const UnitIcon = ({ id, size, isPlayer = true, animate = false }) => {
   return <canvas ref={canvasRef} width={size} height={size} className="pointer-events-none" />;
 };
 
+// --- お宝アイコンコンポーネント ---
+const TreasureIcon = ({ treasure, size }) => {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current; if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2);
+    const scale = size / 60;
+    ctx.scale(scale, scale);
+    drawTreasure(ctx, treasure, 30);
+    ctx.restore();
+  }, [treasure, size]);
+  return <canvas ref={canvasRef} width={size} height={size} className="pointer-events-none" />;
+};
+
 // --- React アプリ ---
 
 const getInitialSaveData = () => {
@@ -60,7 +77,8 @@ const getInitialSaveData = () => {
     unlockedUnits: defaultUnlocked,
     deck: [...defaultUnlocked],
     levels: Object.keys(PLAYER_UNITS).reduce((acc, key) => ({ ...acc, [key]: 1 }), {}),
-    cannonLv: 1, baseHpLv: 1, maxStageCleared: 0
+    cannonLv: 1, baseHpLv: 1, maxStageCleared: 0,
+    collectedTreasures: []
   };
 };
 
@@ -73,7 +91,7 @@ export default function NyanDefenseApp() {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(saveData));
   }, [saveData]);
 
-  const [finalResult, setFinalResult] = useState({ status: '', xpEarned: 0, catFoodEarned: 0 });
+  const [finalResult, setFinalResult] = useState({ status: '', xpEarned: 0, catFoodEarned: 0, droppedTreasures: [] });
   const [gachaResult, setGachaResult] = useState([]);
 
   const canvasRef = useRef(null); const engineRef = useRef(null);
@@ -101,11 +119,18 @@ export default function NyanDefenseApp() {
           if (state.status === 'victory' || state.status === 'defeat') {
             setTimeout(() => {
               const catFoodBonus = state.status === 'victory' ? 50 : 0;
-              setSaveData(prev => ({
-                ...prev, xp: prev.xp + state.sessionXp, catFood: prev.catFood + catFoodBonus,
-                maxStageCleared: state.status === 'victory' ? Math.max(prev.maxStageCleared, stageIndex + 1) : prev.maxStageCleared
-              }));
-              setFinalResult({ status: state.status, xpEarned: state.sessionXp, catFoodEarned: catFoodBonus });
+              const droppedTreasures = state.status === 'victory' ? rollTreasureDrop(STAGES[stageIndex].id) : [];
+              const newTreasureIds = droppedTreasures.map(t => t.id);
+              setSaveData(prev => {
+                const existingSet = new Set(prev.collectedTreasures || []);
+                newTreasureIds.forEach(id => existingSet.add(id));
+                return {
+                  ...prev, xp: prev.xp + state.sessionXp, catFood: prev.catFood + catFoodBonus,
+                  maxStageCleared: state.status === 'victory' ? Math.max(prev.maxStageCleared, stageIndex + 1) : prev.maxStageCleared,
+                  collectedTreasures: [...existingSet]
+                };
+              });
+              setFinalResult({ status: state.status, xpEarned: state.sessionXp, catFoodEarned: catFoodBonus, droppedTreasures });
               stopEngineAndGoTo('result');
             }, 4000);
           }
@@ -188,6 +213,9 @@ export default function NyanDefenseApp() {
           </button>
           <button onClick={() => { setGachaResult([]); stopEngineAndGoTo('gacha'); }} className="py-4 bg-yellow-400 hover:bg-yellow-300 text-black rounded-2xl text-xl md:text-2xl font-black shadow-[0_8px_0_#b45309] active:translate-y-2 active:shadow-none transition-all border-4 border-black flex justify-center items-center gap-2">
             レアガチャ <Gift size={24} strokeWidth={3} />
+          </button>
+          <button onClick={() => setAppState('encyclopedia')} className="py-4 bg-emerald-500 hover:bg-emerald-400 text-white rounded-2xl text-xl md:text-2xl font-black shadow-[0_8px_0_#065f46] active:translate-y-2 active:shadow-none transition-all border-4 border-black flex justify-center items-center gap-2">
+            お宝図鑑 <Shield size={24} strokeWidth={3} />
           </button>
         </div>
 
@@ -528,6 +556,86 @@ export default function NyanDefenseApp() {
     );
   }
 
+  if (appState === 'encyclopedia') {
+    const collected = new Set(saveData.collectedTreasures || []);
+    const totalCount = TREASURES.length;
+    const collectedCount = [...collected].filter(id => TREASURES.find(t => t.id === id)).length;
+
+    // ステージごとにグループ化
+    const stageGroups = STAGES.map(stage => ({
+      stage,
+      treasures: TREASURES.filter(t => t.stageId === stage.id)
+    }));
+
+    return (
+      <div className="flex flex-col items-center min-h-screen w-full bg-gradient-to-b from-emerald-800 to-emerald-950 text-white font-sans select-none p-4 overflow-y-auto">
+        <div className="w-full max-w-4xl">
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={() => setAppState('title')} className="px-4 py-2 bg-white text-black rounded-xl border-4 border-black font-black shadow-[0_4px_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none transition-all flex items-center gap-1">
+              <ChevronLeft strokeWidth={3} size={18} /> もどる
+            </button>
+            <h2 className="text-3xl md:text-4xl font-black drop-shadow-[0_4px_0_rgba(0,0,0,1)]" style={{ WebkitTextStroke: '2px black' }}>
+              お宝図鑑
+            </h2>
+            <div className="bg-white text-black px-3 py-1 rounded-xl border-4 border-black font-black text-sm shadow-[0_4px_0_rgba(0,0,0,1)]">
+              {collectedCount}/{totalCount}
+            </div>
+          </div>
+
+          {stageGroups.map(({ stage, treasures: stageTreasures }) => (
+            <div key={stage.id} className="mb-6">
+              <h3 className="text-xl md:text-2xl font-black mb-3 text-yellow-300 drop-shadow-[0_2px_0_rgba(0,0,0,1)]">
+                {stage.name}
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                {stageTreasures.map(t => {
+                  const isCollected = collected.has(t.id);
+                  const rarityBorder = t.rarity === 'legendary' ? 'border-yellow-400' : t.rarity === 'rare' ? 'border-blue-400' : 'border-gray-400';
+                  const rarityBg = t.rarity === 'legendary' ? 'bg-gradient-to-b from-yellow-50 to-yellow-100' : t.rarity === 'rare' ? 'bg-gradient-to-b from-blue-50 to-blue-100' : 'bg-white';
+                  const rarityLabel = t.rarity === 'legendary' ? '伝説' : t.rarity === 'rare' ? 'レア' : 'ノーマル';
+                  const labelColor = t.rarity === 'legendary' ? 'text-yellow-600' : t.rarity === 'rare' ? 'text-blue-600' : 'text-gray-500';
+
+                  return (
+                    <div key={t.id} className={`${rarityBg} border-4 ${rarityBorder} rounded-2xl p-3 flex flex-col items-center text-black relative ${t.rarity === 'legendary' && isCollected ? 'shadow-[0_0_20px_rgba(255,215,0,0.4)]' : 'shadow-[3px_3px_0_rgba(0,0,0,0.3)]'}`}>
+                      {isCollected ? (
+                        <>
+                          <div className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mb-2">
+                            <TreasureIcon treasure={t} size={55} />
+                          </div>
+                          <p className="font-black text-[11px] md:text-xs text-center leading-tight mb-1">{t.name}</p>
+                          <span className={`text-[9px] font-bold ${labelColor}`}>{rarityLabel}</span>
+                          <p className="text-[9px] text-gray-500 text-center mt-1 leading-tight">{t.desc}</p>
+                          {t.effect && (
+                            <div className="mt-1 flex flex-wrap justify-center gap-1">
+                              {t.effect.hpMul && <span className="text-[8px] bg-green-100 text-green-700 px-1 rounded font-bold">HP+{Math.round((t.effect.hpMul - 1) * 100)}%</span>}
+                              {t.effect.atkMul && <span className="text-[8px] bg-red-100 text-red-700 px-1 rounded font-bold">ATK+{Math.round((t.effect.atkMul - 1) * 100)}%</span>}
+                              {t.effect.spdMul && <span className="text-[8px] bg-blue-100 text-blue-700 px-1 rounded font-bold">SPD+{Math.round((t.effect.spdMul - 1) * 100)}%</span>}
+                              {t.effect.cdMul && <span className="text-[8px] bg-purple-100 text-purple-700 px-1 rounded font-bold">CD-{Math.round((1 - t.effect.cdMul) * 100)}%</span>}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center mb-2 opacity-30">
+                            <div className="w-10 h-10 bg-gray-400 rounded-full flex items-center justify-center">
+                              <span className="text-2xl font-black text-gray-600">?</span>
+                            </div>
+                          </div>
+                          <p className="font-black text-[11px] md:text-xs text-gray-400 text-center leading-tight mb-1">？？？</p>
+                          <span className={`text-[9px] font-bold ${labelColor}`}>{rarityLabel}</span>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (appState === 'result') {
     const isWin = finalResult.status === 'victory';
     return (
@@ -550,6 +658,27 @@ export default function NyanDefenseApp() {
               </div>
             )}
           </div>
+
+          {/* お宝ドロップ表示 */}
+          {finalResult.droppedTreasures && finalResult.droppedTreasures.length > 0 && (
+            <>
+              <div className="w-full border-t-4 border-dashed border-gray-300 my-3 md:my-4"></div>
+              <span className="text-gray-500 text-lg md:text-xl font-black mb-2">獲得お宝</span>
+              <div className="flex flex-wrap justify-center gap-3">
+                {finalResult.droppedTreasures.map(t => (
+                  <div key={t.id} className={`flex flex-col items-center p-2 rounded-xl border-3 ${t.rarity === 'legendary' ? 'border-yellow-400 bg-yellow-50 shadow-[0_0_15px_rgba(255,215,0,0.5)]' :
+                    t.rarity === 'rare' ? 'border-blue-400 bg-blue-50' :
+                      'border-gray-300 bg-gray-50'
+                    }`}>
+                    <TreasureIcon treasure={t} size={45} />
+                    <span className={`text-[10px] font-black mt-1 ${t.rarity === 'legendary' ? 'text-yellow-600' :
+                      t.rarity === 'rare' ? 'text-blue-600' : 'text-gray-600'
+                      }`}>{t.name}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="w-full border-t-4 border-dashed border-gray-300 my-4 md:my-6"></div>
 
