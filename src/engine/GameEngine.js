@@ -4,7 +4,7 @@ import { WALLET_LEVELS } from '../data/walletLevels.js';
 import { drawEntityShape } from './EntityRenderer.js';
 import { sfx } from './SoundManager.js';
 
-// --- ゲームエンジン ---
+// --- ゲームエンジン (スクロール対応版) ---
 
 export class GameEngine {
   constructor(canvas, updateUI, saveData, stageData) {
@@ -14,29 +14,93 @@ export class GameEngine {
 
     this.money = 0; this.sessionXp = 0; this.walletLevelIndex = 0;
     this.units = []; this.enemies = []; this.effects = []; this.particles = []; this.souls = [];
-    
+
     this.screenShakeTime = 0; this.screenShakeIntensity = 0;
     this.cannonPower = 0; this.cannonMax = 15000; this.isFiringCannon = false; this.cannonTimer = 0;
 
+    // --- ワールド座標系 ---
+    this.worldWidth = canvas.width * 4;
     this.groundY = canvas.height - 40;
-    this.playerBase = { x: canvas.width - 130, y: this.groundY - 120, width: 80, height: 120, hp: 1000 + (saveData.baseHpLv * 500), maxHp: 1000 + (saveData.baseHpLv * 500), isBase: true };
+    this.playerBase = { x: this.worldWidth - 130, y: this.groundY - 120, width: 80, height: 120, hp: 1000 + (saveData.baseHpLv * 500), maxHp: 1000 + (saveData.baseHpLv * 500), isBase: true };
     this.enemyBase = { x: 50, y: this.groundY - 120, width: 80, height: 120, hp: stageData.enemyBaseHp, maxHp: stageData.enemyBaseHp, isBase: true };
+
+    // --- カメラ ---
+    this.cameraX = this.worldWidth - canvas.width; // 開始時は自拠点側
+    this.cameraTargetX = this.cameraX;
+    this.cameraSmoothing = 0.06;
+
+    // --- ドラッグスクロール ---
+    this.isDragging = false;
+    this.dragStartX = 0;
+    this.cameraAtDragStart = 0;
+    this.autoFollowDelay = 0; // ドラッグ後しばらく自動追従を停止
+    this.autoFollowCooldown = 2000; // 2秒後に自動追従再開
 
     this.stageTime = 0; this.enemySpawnTimer = 0;
     this.cooldowns = Object.keys(PLAYER_UNITS).reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
     this.status = 'playing';
     this.bossSpawned = false;
+
+    // イベントハンドラをバインド
+    this._onPointerDown = this._onPointerDown.bind(this);
+    this._onPointerMove = this._onPointerMove.bind(this);
+    this._onPointerUp = this._onPointerUp.bind(this);
+  }
+
+  // --- 入力イベント ---
+  _onPointerDown(e) {
+    if (this.status !== 'playing') return;
+    this.isDragging = true;
+    this.dragStartX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    this.cameraAtDragStart = this.cameraX;
+    this.autoFollowDelay = 0;
+  }
+
+  _onPointerMove(e) {
+    if (!this.isDragging) return;
+    e.preventDefault();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+    const dx = this.dragStartX - clientX;
+    this.cameraX = this.clampCamera(this.cameraAtDragStart + dx * 1.5);
+    this.cameraTargetX = this.cameraX;
+  }
+
+  _onPointerUp() {
+    if (this.isDragging) {
+      this.isDragging = false;
+      this.autoFollowDelay = this.autoFollowCooldown;
+    }
+  }
+
+  clampCamera(x) {
+    return Math.max(0, Math.min(x, this.worldWidth - this.canvas.width));
   }
 
   start() {
     sfx.init(); sfx.startBgm(false);
     this.isRunning = true; this.lastTime = performance.now();
+
+    // イベントリスナー登録
+    this.canvas.addEventListener('mousedown', this._onPointerDown);
+    this.canvas.addEventListener('touchstart', this._onPointerDown, { passive: true });
+    window.addEventListener('mousemove', this._onPointerMove);
+    window.addEventListener('touchmove', this._onPointerMove, { passive: false });
+    window.addEventListener('mouseup', this._onPointerUp);
+    window.addEventListener('touchend', this._onPointerUp);
+
     requestAnimationFrame((t) => this.loop(t));
     this.uiInterval = setInterval(() => this.syncUI(), 100);
   }
 
   stop() {
     this.isRunning = false; sfx.stopBgm(); clearInterval(this.uiInterval);
+    // イベントリスナー解除
+    this.canvas.removeEventListener('mousedown', this._onPointerDown);
+    this.canvas.removeEventListener('touchstart', this._onPointerDown);
+    window.removeEventListener('mousemove', this._onPointerMove);
+    window.removeEventListener('touchmove', this._onPointerMove);
+    window.removeEventListener('mouseup', this._onPointerUp);
+    window.removeEventListener('touchend', this._onPointerUp);
   }
 
   get currentWallet() { return WALLET_LEVELS[this.walletLevelIndex]; }
@@ -75,7 +139,7 @@ export class GameEngine {
       sfx.se('cannonFire'); this.shakeScreen(800, 15);
       const dmg = 300 + (this.saveData.cannonLv * 250);
       this.enemies.forEach(e => {
-        this.applyDamage(e, dmg, false, true); this.addParticles(e.x + e.size/2, e.y + e.size/2, '#fbbf24', 15);
+        this.applyDamage(e, dmg, false, true); this.addParticles(e.x + e.size / 2, e.y + e.size / 2, '#fbbf24', 15);
       });
       this.syncUI();
     } else { sfx.se('error'); }
@@ -87,12 +151,12 @@ export class GameEngine {
     if (this.money >= data.cost && currentCooldown <= 0 && this.status === 'playing') {
       this.money -= data.cost; this.cooldowns[typeId] = data.cooldown;
       const lv = this.saveData.levels[typeId] || 1;
-      const actualHp = data.hp * (1 + (lv - 1) * 0.2); 
+      const actualHp = data.hp * (1 + (lv - 1) * 0.2);
       const actualAttack = data.attack * (1 + (lv - 1) * 0.2);
 
       this.units.push({
         ...data, hp: actualHp, maxHp: actualHp, attack: actualAttack, lastKbHp: actualHp,
-        x: this.playerBase.x - data.size, y: this.groundY - data.size + (Math.random()*16 - 8),
+        x: this.playerBase.x - data.size, y: this.groundY - data.size + (Math.random() * 16 - 8),
         state: 'walk', attackTimer: 0, kbTimer: 0, isForceKb: false,
         instanceId: Math.random().toString(36).substr(2, 9)
       });
@@ -103,11 +167,11 @@ export class GameEngine {
   spawnEnemy(typeId, isBoss = false) {
     const data = ENEMY_UNITS[typeId];
     const startX = isBoss ? this.enemyBase.x + this.enemyBase.width + 30 : this.enemyBase.x + this.enemyBase.width;
-    const stageMultiplier = 1 + (this.stage.id - 1) * 0.6; 
-    
+    const stageMultiplier = 1 + (this.stage.id - 1) * 0.6;
+
     this.enemies.push({
       ...data, hp: data.hp * stageMultiplier, maxHp: data.hp * stageMultiplier, attack: data.attack * stageMultiplier,
-      lastKbHp: data.hp * stageMultiplier, x: startX, y: this.groundY - data.size + (Math.random()*16 - 8),
+      lastKbHp: data.hp * stageMultiplier, x: startX, y: this.groundY - data.size + (Math.random() * 16 - 8),
       state: 'walk', attackTimer: 0, kbTimer: 0, isBoss: isBoss, isForceKb: false,
       instanceId: Math.random().toString(36).substr(2, 9)
     });
@@ -115,12 +179,12 @@ export class GameEngine {
 
   triggerBossShockwave() {
     this.bossSpawned = true;
-    sfx.se('shockwave'); this.shakeScreen(2000, 40); 
-    sfx.startBgm(true); 
+    sfx.se('shockwave'); this.shakeScreen(2000, 40);
+    sfx.startBgm(true);
 
     this.units.forEach(u => {
       this.applyDamage(u, 300, true, true);
-      u.state = 'knockback'; u.kbTimer = 1000; u.isForceKb = true; u.x += 200; 
+      u.state = 'knockback'; u.kbTimer = 1000; u.isForceKb = true; u.x += 200;
     });
 
     this.spawnEnemy(this.stage.boss, true);
@@ -134,13 +198,13 @@ export class GameEngine {
     if (!target.isBase) {
       let color = isPlayerTarget ? '#ef4444' : '#3b82f6';
       const offsetX = (Math.random() - 0.5) * 20;
-      this.effects.push({ x: target.x + target.size/2 + offsetX, y: target.y - 10, text: Math.floor(amount), life: 600, maxLife: 600, color });
-      if(Math.random() > 0.5) this.addParticles(target.x + target.size/2, target.y + target.size/2, color, 4);
+      this.effects.push({ x: target.x + target.size / 2 + offsetX, y: target.y - 10, text: Math.floor(amount), life: 600, maxLife: 600, color });
+      if (Math.random() > 0.5) this.addParticles(target.x + target.size / 2, target.y + target.size / 2, color, 4);
       sfx.se('hit');
 
       if (target.hp <= 0) {
-        sfx.se('kill'); this.addParticles(target.x + target.size/2, target.y + target.size/2, 'white', 25);
-        this.addSoul(target.x + target.size/2, target.y); 
+        sfx.se('kill'); this.addParticles(target.x + target.size / 2, target.y + target.size / 2, 'white', 25);
+        this.addSoul(target.x + target.size / 2, target.y);
         if (!isPlayerTarget) this.sessionXp += target.xp;
       } else {
         let kbThreshold = target.maxHp / target.kb;
@@ -151,7 +215,7 @@ export class GameEngine {
         }
       }
     } else {
-      this.effects.push({ x: target.x + target.width/2, y: target.y + target.height/2, text: Math.floor(amount), life: 800, maxLife: 800, color: '#ffaa00' });
+      this.effects.push({ x: target.x + target.width / 2, y: target.y + target.height / 2, text: Math.floor(amount), life: 800, maxLife: 800, color: '#ffaa00' });
       sfx.se('baseHit'); this.shakeScreen(300, 8);
       if (!isPlayerTarget && !this.bossSpawned && target.hp <= target.maxHp * 0.9) {
         this.triggerBossShockwave();
@@ -186,7 +250,7 @@ export class GameEngine {
     });
 
     this.enemySpawnTimer += dt;
-    let spawnInterval = this.bossSpawned ? 2000 : Math.max(1000, 4000 - (this.stageTime / 20)); 
+    let spawnInterval = this.bossSpawned ? 2000 : Math.max(1000, 4000 - (this.stageTime / 20));
     if (this.enemySpawnTimer > spawnInterval) {
       this.enemySpawnTimer = 0; let r = Math.random();
       if (this.stage.id <= 2) {
@@ -212,10 +276,25 @@ export class GameEngine {
     });
 
     this.effects = this.effects.filter(eff => { eff.life -= dt; eff.y -= (20 * dt) / 1000; return eff.life > 0; });
-    this.particles = this.particles.filter(p => { p.life -= dt; p.x += (p.vx * dt) / 50; p.y += (p.vy * dt) / 50; p.vy += 0.5; if(p.y > this.groundY) p.y = this.groundY; return p.life > 0; });
+    this.particles = this.particles.filter(p => { p.life -= dt; p.x += (p.vx * dt) / 50; p.y += (p.vy * dt) / 50; p.vy += 0.5; if (p.y > this.groundY) p.y = this.groundY; return p.life > 0; });
     this.souls = this.souls.filter(s => { s.life -= dt; s.y += (s.vy * dt) / 10; return s.life > 0; });
 
     if (this.screenShakeTime > 0) this.screenShakeTime -= dt;
+
+    // --- カメラ自動追従 ---
+    if (this.autoFollowDelay > 0) {
+      this.autoFollowDelay -= dt;
+    }
+    if (!this.isDragging && this.autoFollowDelay <= 0) {
+      // 最前線ユニット（味方で最もx座標が小さいもの）にフォーカス
+      let frontlineX = this.playerBase.x; // デフォルトは自拠点
+      if (this.units.length > 0) {
+        frontlineX = Math.min(...this.units.map(u => u.x));
+      }
+      // 最前線を画面の左1/3に配置
+      this.cameraTargetX = this.clampCamera(frontlineX - this.canvas.width * 0.33);
+      this.cameraX += (this.cameraTargetX - this.cameraX) * this.cameraSmoothing;
+    }
 
     if (this.playerBase.hp <= 0 && this.status === 'playing') {
       this.status = 'defeat'; sfx.stopBgm(); sfx.se('lose'); this.syncUI();
@@ -227,8 +306,8 @@ export class GameEngine {
   updateEntities(entities, targets, targetBase, dt, isPlayer) {
     entities.forEach(char => {
       if (char.state === 'knockback') {
-        char.kbTimer -= dt; 
-        char.x += isPlayer ? 3 : -3; 
+        char.kbTimer -= dt;
+        char.x += isPlayer ? 3 : -3;
         if (char.kbTimer <= 0) char.state = 'walk';
         return;
       }
@@ -265,6 +344,7 @@ export class GameEngine {
 
   draw() {
     const { ctx, canvas } = this;
+    const camX = this.cameraX;
     ctx.save();
 
     if (this.screenShakeTime > 0) {
@@ -272,97 +352,164 @@ export class GameEngine {
       ctx.translate(dx, dy);
     }
 
+    // --- 背景 (パララックス) ---
     ctx.fillStyle = this.stage.bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.beginPath(); ctx.arc(200, canvas.height, 150, 0, Math.PI, true); ctx.arc(600, canvas.height, 200, 0, Math.PI, true); ctx.fill();
+    // 遠景の丘（カメラの0.2倍速でスクロール）
+    const parallax1 = camX * 0.2;
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.beginPath(); ctx.arc(300 - parallax1 % (canvas.width * 2), canvas.height - 20, 180, 0, Math.PI, true); ctx.fill();
+    ctx.beginPath(); ctx.arc(800 - parallax1 % (canvas.width * 2), canvas.height - 10, 250, 0, Math.PI, true); ctx.fill();
+    ctx.beginPath(); ctx.arc(-200 - parallax1 % (canvas.width * 2) + canvas.width * 2, canvas.height - 30, 200, 0, Math.PI, true); ctx.fill();
+    // 中景の丘（0.4倍速）
+    const parallax2 = camX * 0.4;
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.beginPath(); ctx.arc(200 - parallax2 % (canvas.width * 2), canvas.height, 150, 0, Math.PI, true); ctx.fill();
+    ctx.beginPath(); ctx.arc(700 - parallax2 % (canvas.width * 2), canvas.height, 200, 0, Math.PI, true); ctx.fill();
 
     if (this.bossSpawned && this.screenShakeTime > 1000) {
-       ctx.fillStyle = `rgba(255, 255, 255, ${(this.screenShakeTime-1000)/1000})`; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = `rgba(255, 255, 255, ${(this.screenShakeTime - 1000) / 1000})`; ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
+    // 地面
     ctx.fillStyle = this.stage.ground; ctx.fillRect(0, this.groundY, canvas.width, canvas.height - this.groundY);
     ctx.fillStyle = this.stage.groundLight; ctx.fillRect(0, this.groundY + 15, canvas.width, canvas.height - this.groundY - 15);
 
+    // --- ワールド描画（カメラオフセット適用） ---
+    ctx.save();
+    ctx.translate(-camX, 0);
+
+    // にゃんこ砲レーザー
     if (this.isFiringCannon) {
       const laserWidth = Math.random() * 30 + 50;
-      ctx.fillStyle = 'rgba(255, 255, 150, 0.9)'; ctx.fillRect(this.enemyBase.x, this.groundY - 70 - laserWidth/2, this.playerBase.x - this.enemyBase.x, laserWidth);
-      ctx.fillStyle = 'rgba(255, 255, 255, 1)'; ctx.fillRect(this.enemyBase.x, this.groundY - 70 - laserWidth/4, this.playerBase.x - this.enemyBase.x, laserWidth/2);
+      ctx.fillStyle = 'rgba(255, 255, 150, 0.9)'; ctx.fillRect(this.enemyBase.x, this.groundY - 70 - laserWidth / 2, this.playerBase.x - this.enemyBase.x, laserWidth);
+      ctx.fillStyle = 'rgba(255, 255, 255, 1)'; ctx.fillRect(this.enemyBase.x, this.groundY - 70 - laserWidth / 4, this.playerBase.x - this.enemyBase.x, laserWidth / 2);
     }
 
+    // 拠点
     this.drawBase(this.enemyBase, false); this.drawBase(this.playerBase, true);
 
+    // にゃんこ砲台
     if (this.status !== 'defeat') {
-      ctx.fillStyle = '#222'; ctx.fillRect(this.playerBase.x - 40, this.groundY - 80, 50, 30); 
+      ctx.fillStyle = '#222'; ctx.fillRect(this.playerBase.x - 40, this.groundY - 80, 50, 30);
     }
 
-    const allChars = [...this.units.map(u=>({char:u, isPlayer:true})), ...this.enemies.map(e=>({char:e, isPlayer:false}))];
+    // キャラクター描画
+    const allChars = [...this.units.map(u => ({ char: u, isPlayer: true })), ...this.enemies.map(e => ({ char: e, isPlayer: false }))];
     allChars.sort((a, b) => a.char.y - b.char.y);
     allChars.forEach(c => {
+      // カリング: 画面外のキャラは描画スキップ
+      if (c.char.x + c.char.size * 2 < camX - 100 || c.char.x - c.char.size > camX + canvas.width + 100) return;
+
       ctx.save();
       const s = c.char.size;
       const kbRatio = c.char.state === 'knockback' ? (c.char.kbTimer / (c.char.isForceKb ? 500 : 300)) : 0;
       const attackRot = c.char.state === 'knockback' ? (c.isPlayer ? 0.5 : -0.5) * kbRatio : 0;
-      const kbYOffset = c.char.state === 'knockback' ? -Math.sin(kbRatio * Math.PI) * 30 : 0; 
-      
-      ctx.translate(c.char.x + s/2, c.char.y + s/2 + kbYOffset);
+      const kbYOffset = c.char.state === 'knockback' ? -Math.sin(kbRatio * Math.PI) * 30 : 0;
+
+      ctx.translate(c.char.x + s / 2, c.char.y + s / 2 + kbYOffset);
       ctx.rotate(attackRot);
       if (c.isPlayer) ctx.scale(-1, 1);
-      
+
       drawEntityShape(ctx, c.char.id, s, c.char.state, this.stageTime, c.isPlayer, c.char.attackFreq);
       ctx.restore();
-      
+
       // HPバー
       ctx.save(); ctx.translate(c.char.x, c.char.y - 20);
       ctx.fillStyle = 'black'; ctx.fillRect(0, 0, s, 6);
-      ctx.fillStyle = c.isPlayer ? '#60a5fa' : '#ef4444'; ctx.fillRect(1, 1, (s-2) * Math.max(0, c.char.hp / c.char.maxHp), 4);
+      ctx.fillStyle = c.isPlayer ? '#60a5fa' : '#ef4444'; ctx.fillRect(1, 1, (s - 2) * Math.max(0, c.char.hp / c.char.maxHp), 4);
       ctx.restore();
     });
 
+    // 魂
     this.souls.forEach(s => {
+      if (s.x < camX - 50 || s.x > camX + canvas.width + 50) return;
       ctx.globalAlpha = s.life / s.maxLife; ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      ctx.beginPath(); ctx.arc(s.x, s.y, 8, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath(); ctx.moveTo(s.x-8, s.y); ctx.lineTo(s.x, s.y-25); ctx.lineTo(s.x+8, s.y); ctx.fill();
+      ctx.beginPath(); ctx.arc(s.x, s.y, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(s.x - 8, s.y); ctx.lineTo(s.x, s.y - 25); ctx.lineTo(s.x + 8, s.y); ctx.fill();
     });
     ctx.globalAlpha = 1.0;
 
+    // パーティクル
     this.particles.forEach(p => {
+      if (p.x < camX - 50 || p.x > camX + canvas.width + 50) return;
       ctx.globalAlpha = p.life / p.maxLife; ctx.fillStyle = p.color;
       ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
     });
     ctx.globalAlpha = 1.0;
 
+    // ダメージテキスト
     this.effects.forEach(eff => {
+      if (eff.x < camX - 100 || eff.x > camX + canvas.width + 100) return;
       ctx.globalAlpha = eff.life / eff.maxLife;
       ctx.fillStyle = eff.color; ctx.font = 'bold 26px "Impact", sans-serif';
-      ctx.strokeStyle = 'black'; ctx.lineWidth = 5; 
+      ctx.strokeStyle = 'black'; ctx.lineWidth = 5;
       ctx.strokeText(eff.text, eff.x, eff.y); ctx.fillStyle = 'white'; ctx.fillText(eff.text, eff.x, eff.y);
     });
     ctx.globalAlpha = 1.0;
 
+    ctx.restore(); // カメラオフセット終了
+
+    // --- HUD（カメラ影響なし） ---
+
+    // ボス出現テキスト
     if (this.bossSpawned && this.screenShakeTime > 500) {
       ctx.fillStyle = 'red'; ctx.font = 'black 100px sans-serif'; ctx.textAlign = 'center';
       ctx.strokeStyle = 'black'; ctx.lineWidth = 15;
-      ctx.strokeText("BOSS 襲来!!", canvas.width/2, canvas.height/2); ctx.fillStyle = 'white'; ctx.fillText("BOSS 襲来!!", canvas.width/2, canvas.height/2);
+      ctx.strokeText("BOSS 襲来!!", canvas.width / 2, canvas.height / 2); ctx.fillStyle = 'white'; ctx.fillText("BOSS 襲来!!", canvas.width / 2, canvas.height / 2);
       ctx.textAlign = 'left';
     }
+
+    // --- ミニマップ ---
+    this.drawMinimap();
 
     ctx.restore();
   }
 
+  drawMinimap() {
+    const { ctx, canvas } = this;
+    const mapW = 180; const mapH = 20;
+    const mapX = canvas.width - mapW - 10; const mapY = 10;
+    const scale = mapW / this.worldWidth;
+
+    // 背景
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(mapX, mapY, mapW, mapH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.strokeRect(mapX, mapY, mapW, mapH);
+
+    // ビューポート範囲
+    const vpX = mapX + this.cameraX * scale;
+    const vpW = canvas.width * scale;
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(vpX, mapY, vpW, mapH);
+
+    // 拠点
+    ctx.fillStyle = '#60a5fa'; ctx.fillRect(mapX + this.playerBase.x * scale - 2, mapY + 2, 4, mapH - 4);
+    ctx.fillStyle = '#ef4444'; ctx.fillRect(mapX + this.enemyBase.x * scale - 2, mapY + 2, 4, mapH - 4);
+
+    // ユニット点
+    this.units.forEach(u => {
+      ctx.fillStyle = '#60a5fa';
+      ctx.fillRect(mapX + u.x * scale, mapY + mapH / 2 - 1, 2, 2);
+    });
+    this.enemies.forEach(e => {
+      ctx.fillStyle = e.isBoss ? '#fbbf24' : '#ef4444';
+      ctx.fillRect(mapX + e.x * scale, mapY + mapH / 2 - 1, e.isBoss ? 3 : 2, e.isBoss ? 3 : 2);
+    });
+  }
+
   drawBase(base, isPlayer) {
-    if(base.hp <= 0) return; 
+    if (base.hp <= 0) return;
     const { ctx } = this;
     ctx.fillStyle = 'white'; ctx.strokeStyle = 'black'; ctx.lineWidth = 4;
     ctx.beginPath(); ctx.rect(base.x, base.y + 40, base.width, base.height - 40); ctx.fill(); ctx.stroke();
 
     if (isPlayer) {
-      ctx.beginPath(); ctx.arc(base.x + base.width/2, base.y + 30, 35, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(base.x + base.width / 2, base.y + 30, 35, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(base.x + 10, base.y + 10); ctx.lineTo(base.x, base.y - 15); ctx.lineTo(base.x + 35, base.y + 5); ctx.fill(); ctx.stroke();
       ctx.fillStyle = 'black'; ctx.fillRect(base.x + 25, base.y + 25, 4, 4); ctx.fillRect(base.x + 50, base.y + 25, 4, 4);
     } else {
-      ctx.beginPath(); ctx.arc(base.x + base.width/2, base.y + 30, 35, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(base.x + 10, base.y + 30, 8, 15, Math.PI/4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(base.x + 70, base.y + 30, 8, 15, -Math.PI/4, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(base.x + 25, base.y + 25, 6, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(base.x + 55, base.y + 25, 6, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(base.x + base.width / 2, base.y + 30, 35, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(base.x + 10, base.y + 30, 8, 15, Math.PI / 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(base.x + 70, base.y + 30, 8, 15, -Math.PI / 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(base.x + 25, base.y + 25, 6, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(base.x + 55, base.y + 25, 6, 0, Math.PI * 2); ctx.fill();
     }
   }
 }
