@@ -1,4 +1,4 @@
-import { PLAYER_UNITS } from '../data/playerUnits.js';
+import { PLAYER_UNITS, getUnitForm } from '../data/playerUnits.js';
 import { ENEMY_UNITS } from '../data/enemyUnits.js';
 import { WALLET_LEVELS } from '../data/walletLevels.js';
 import { drawEntityShape } from './EntityRenderer.js';
@@ -151,13 +151,15 @@ export class GameEngine {
     if (this.money >= data.cost && currentCooldown <= 0 && this.status === 'playing') {
       this.money -= data.cost; this.cooldowns[typeId] = data.cooldown;
       const lv = this.saveData.levels[typeId] || 1;
-      const actualHp = data.hp * (1 + (lv - 1) * 0.2);
-      const actualAttack = data.attack * (1 + (lv - 1) * 0.2);
+      const form = getUnitForm(typeId, lv);
+      const actualHp = form.hp * (1 + (lv - 1) * 0.2);
+      const actualAttack = form.attack * (1 + (lv - 1) * 0.2);
 
       this.units.push({
-        ...data, hp: actualHp, maxHp: actualHp, attack: actualAttack, lastKbHp: actualHp,
-        x: this.playerBase.x - data.size, y: this.groundY - data.size + (Math.random() * 16 - 8),
+        ...data, ...form, hp: actualHp, maxHp: actualHp, attack: actualAttack, lastKbHp: actualHp,
+        x: this.playerBase.x - form.size, y: this.groundY - form.size + (Math.random() * 16 - 8),
         state: 'walk', attackTimer: 0, kbTimer: 0, isForceKb: false,
+        drawId: form.drawId, id: typeId,
         instanceId: Math.random().toString(36).substr(2, 9)
       });
       sfx.se('spawn'); this.syncUI();
@@ -410,7 +412,7 @@ export class GameEngine {
       ctx.rotate(attackRot);
       if (c.isPlayer) ctx.scale(-1, 1);
 
-      drawEntityShape(ctx, c.char.id, s, c.char.state, this.stageTime, c.isPlayer, c.char.attackFreq);
+      drawEntityShape(ctx, c.char.drawId || c.char.id, s, c.char.state, this.stageTime, c.isPlayer, c.char.attackFreq);
       ctx.restore();
 
       // HPバー

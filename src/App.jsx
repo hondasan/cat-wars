@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ArrowUpCircle, Coins, Zap, Play, RotateCcw, ChevronLeft, ChevronRight, Sword, Gift, Lock, Shield, Users, Plus, X, GripVertical } from 'lucide-react';
 import { LOCAL_STORAGE_KEY, WALLET_LEVELS } from './data/walletLevels.js';
 import { STAGES } from './data/stages.js';
-import { PLAYER_UNITS } from './data/playerUnits.js';
+import { PLAYER_UNITS, getUnitForm } from './data/playerUnits.js';
 import { ENEMY_UNITS } from './data/enemyUnits.js';
 import { drawEntityShape } from './engine/EntityRenderer.js';
 import { sfx } from './engine/SoundManager.js';
@@ -20,10 +20,12 @@ const UnitIcon = ({ id, size, isPlayer = true, animate = false }) => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const time = animate ? Date.now() - startTime : 0;
       ctx.save(); ctx.translate(canvas.width / 2, canvas.height - 10);
-      const baseSize = PLAYER_UNITS[id] ? PLAYER_UNITS[id].size : (ENEMY_UNITS[id] ? ENEMY_UNITS[id].size : 30);
+      const baseUnit = PLAYER_UNITS[id] || ENEMY_UNITS[id];
+      const baseSize = baseUnit ? baseUnit.size : 30;
+      const drawId = (isPlayer && PLAYER_UNITS[id]) ? id : id;
       const scale = (size * 0.5) / baseSize;
       ctx.scale(scale, scale);
-      drawEntityShape(ctx, id, baseSize, animate ? 'walk' : 'idle', time, isPlayer, 1000);
+      drawEntityShape(ctx, drawId, baseSize, animate ? 'walk' : 'idle', time, isPlayer, 1000);
       ctx.restore();
       if (animate) animationId = requestAnimationFrame(render);
     };
@@ -384,25 +386,32 @@ export default function NyanDefenseApp() {
             const lv = saveData.levels[unitId];
             const cost = Math.floor(unit.baseUpgradeCost * Math.pow(1.5, lv - 1));
             const canAfford = saveData.xp >= cost;
+            const form = getUnitForm(unitId, lv);
+            const nextEvo = unit.evolutions ? unit.evolutions.find(e => lv < e.levelReq) : null;
             return (
-              <div key={unit.id} className="bg-white border-4 border-black rounded-2xl p-3 md:p-4 flex items-center justify-between shadow-[4px_4px_0_rgba(0,0,0,0.2)]">
-                <div className="flex items-center gap-3 md:gap-4">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-100 rounded-xl border-2 border-gray-300 flex items-center justify-center">
-                    <UnitIcon id={unit.id} size={50} animate={false} />
+              <div key={unit.id} className="bg-white border-4 border-black rounded-2xl p-3 md:p-4 shadow-[4px_4px_0_rgba(0,0,0,0.2)]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 md:gap-4">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-gray-100 rounded-xl border-2 border-gray-300 flex items-center justify-center">
+                      <UnitIcon id={form.drawId} size={50} animate={false} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-base md:text-lg">{form.formName}
+                        {form.form > 1 && <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-bold ${form.form === 3 ? 'bg-yellow-400 text-yellow-900' : 'bg-blue-400 text-white'}`}>{form.form === 3 ? '第3形態' : '第2形態'}</span>}
+                      </h3>
+                      <p className="text-xs md:text-sm font-bold text-gray-500">Lv. {lv} → <span className="text-blue-500">{lv + 1}</span></p>
+                      {nextEvo && <p className="text-[10px] font-bold text-purple-500">Lv.{nextEvo.levelReq}で「{nextEvo.name}」に進化</p>}
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-black text-lg md:text-xl">{unit.name}</h3>
-                    <p className="text-xs md:text-sm font-bold text-gray-500">Lv. {lv} → <span className="text-blue-500">{lv + 1}</span></p>
-                  </div>
+                  <button
+                    onClick={() => handleUpgrade(unit.id, true)}
+                    disabled={!canAfford}
+                    className={`px-3 md:px-4 py-2 md:py-3 rounded-xl border-4 font-black transition-all ${canAfford ? 'bg-yellow-400 border-black shadow-[0_6px_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none hover:bg-yellow-300' : 'bg-gray-300 border-gray-400 text-gray-500'}`}
+                  >
+                    <span className="block text-[9px] md:text-[10px] mb-1 leading-none">必要XP</span>
+                    {cost.toLocaleString()}
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleUpgrade(unit.id, true)}
-                  disabled={!canAfford}
-                  className={`px-3 md:px-4 py-2 md:py-3 rounded-xl border-4 font-black transition-all ${canAfford ? 'bg-yellow-400 border-black shadow-[0_6px_0_rgba(0,0,0,1)] active:translate-y-1 active:shadow-none hover:bg-yellow-300' : 'bg-gray-300 border-gray-400 text-gray-500'}`}
-                >
-                  <span className="block text-[9px] md:text-[10px] mb-1 leading-none">必要XP</span>
-                  {cost.toLocaleString()}
-                </button>
               </div>
             );
           })}
@@ -653,6 +662,8 @@ export default function NyanDefenseApp() {
           <div className="grid grid-rows-2 grid-flow-col gap-1.5 md:gap-2 h-full min-w-max">
             {saveData.deck.map(unitId => {
               const unit = PLAYER_UNITS[unitId];
+              const lv = saveData.levels[unitId] || 1;
+              const form = getUnitForm(unitId, lv);
               const currentCooldown = gameState.cooldowns[unit.id] || 0;
               const cooldownPercent = (currentCooldown / unit.cooldown) * 100;
               const isAffordable = gameState.money >= unit.cost;
@@ -674,11 +685,11 @@ export default function NyanDefenseApp() {
                   `}
                 >
                   <div className={`flex justify-center items-center w-full h-full pb-2 transition-transform ${canSpawn ? 'scale-100' : 'scale-90 opacity-50'}`}>
-                    <UnitIcon id={unit.id} size={45} animate={canSpawn} />
+                    <UnitIcon id={form.drawId} size={45} animate={canSpawn} />
                   </div>
 
                   <div className={`absolute bottom-0 w-full bg-black bg-opacity-80 text-[9px] md:text-[10px] font-black text-center py-0.5 z-30 ${!isAffordable && !isCoolingDown ? 'text-red-400' : 'text-white'}`}>
-                    {unit.cost}円
+                    {form.cost || unit.cost}円
                   </div>
                   <div className="absolute top-0 right-0 bg-yellow-400 text-black text-[8px] md:text-[9px] font-black px-1 rounded-bl-lg border-b-2 border-l-2 border-black z-30">Lv.{saveData.levels[unit.id]}</div>
 
